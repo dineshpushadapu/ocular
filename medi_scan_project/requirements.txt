@@ -1,0 +1,10 @@
+streamlit==1.32.0
+tensorflow==2.18.0
+pillow==10.1.0
+numpy==1.26.0
+matplotlib==3.8.0
+scikit-learn==1.3.2
+pandas==2.1.1
+opencv-python==4.8.1.78
+jupyter==1.0.0
+ipython==8.18.1
