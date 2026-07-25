@@ -53,13 +53,15 @@ def load_model():
 def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple[bool, str, float, Dict[str, Any]]:
     """
     Verifies whether the uploaded image is a valid retinal fundus photograph before disease classification.
+    Strictly rejects non-retinal images (human faces, selfies, pets/animals, landscapes, documents, screenshots, objects).
 
-    Performs image structure & color spectrum checks:
-    - Minimum resolution & aspect ratio
-    - Dark outer corners / fundus aperture mask
-    - Red channel dominance & warm hue distribution
-    - Center-to-corner contrast ratio & circularity
-    - Hard rejection filters for non-retinal images (selfies, faces, animals, landscapes, documents)
+    Checks performed:
+    1. Human Face & Selfie Detection (Haar Cascades filtering with safe exception handling)
+    2. Outer corner aperture darkness (fundus camera frame check)
+    3. Retinal color spectrum order (Red dominance over Blue and Green)
+    4. Warm hue distribution ratio
+    5. Straight line / document structure detection (Hough transform)
+    6. Center-to-corner illumination contrast & circularity
 
     Returns:
         (is_retina: bool, message: str, score: float, details: dict)
@@ -90,13 +92,13 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
 
     height, width, _ = img_rgb.shape
 
-    # 2. Check basic dimensions and aspect ratio
+    # 2. Dimension and Aspect Ratio Checks
     if height < 100 or width < 100:
         return False, default_error_msg, 0.0, {"error": "Image resolution too low"}
 
     aspect_ratio = width / float(height)
     if aspect_ratio < 0.55 or aspect_ratio > 1.80:
-        return False, default_error_msg, 0.1, {"reason": "Aspect ratio outside typical fundus range"}
+        return False, default_error_msg, 0.0, {"reason": "Aspect ratio outside typical fundus range"}
 
     # Resize to standard size for analysis
     analysis_size = (300, 300)
@@ -104,9 +106,29 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
 
     gray = cv2.cvtColor(resized_rgb, cv2.COLOR_RGB2GRAY)
     hsv = cv2.cvtColor(resized_rgb, cv2.COLOR_RGB2HSV)
-
-    # 3. Corner Darkness / Aperture Mask Check
     h_len, w_len = analysis_size
+
+    # 3. Human Face & Selfie Detection (Safe exception handling for OpenCV environment differences)
+    try:
+        cascade_path = None
+        if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+            cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
+        
+        if cascade_path and os.path.exists(cascade_path):
+            face_cascade = cv2.CascadeClassifier(cascade_path)
+            if not face_cascade.empty():
+                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=6, minSize=(60, 60))
+                for (fx, fy, fw, fh) in faces:
+                    face_area_ratio = (fw * fh) / float(h_len * w_len)
+                    if face_area_ratio > 0.08:
+                        return False, default_error_msg, 0.0, {
+                            "hard_rejection": True,
+                            "rejection_reason": "Human face/selfie detected."
+                        }
+    except Exception:
+        pass
+
+    # 4. Outer Corner Aperture Mask Check
     c_h, c_w = int(h_len * 0.15), int(w_len * 0.15)
 
     top_left = gray[0:c_h, 0:c_w]
@@ -120,6 +142,13 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
     ])
     mean_corner_brightness = float(np.mean(corner_pixels))
 
+    # Hard rejection if outer corners are bright (non-fundus photos, selfies, indoor photos, animals, landscapes, docs)
+    if mean_corner_brightness > 85.0:
+        return False, default_error_msg, 0.0, {
+            "hard_rejection": True,
+            "rejection_reason": f"Bright corner aperture ({round(mean_corner_brightness, 1)} > 85.0). Lacks dark fundus camera frame."
+        }
+
     # Center region illumination
     m_h, m_w = int(h_len * 0.25), int(w_len * 0.25)
     center_roi = gray[m_h:h_len - m_h, m_w:w_len - m_w]
@@ -127,7 +156,7 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
 
     center_corner_contrast = (mean_center_brightness + 1.0) / (mean_corner_brightness + 1.0)
 
-    # 4. Color Spectrum Analysis
+    # 5. Color Spectrum Analysis (Retinal tissue: Red dominant over Blue and Green)
     r_chan = resized_rgb[:, :, 0].astype(float)
     g_chan = resized_rgb[:, :, 1].astype(float)
     b_chan = resized_rgb[:, :, 2].astype(float)
@@ -137,6 +166,14 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
     mean_b = float(np.mean(b_chan))
 
     red_blue_ratio = (mean_r + 1.0) / (mean_b + 1.0)
+    red_green_ratio = (mean_r + 1.0) / (mean_g + 1.0)
+
+    # Hard rejection if Blue intensity is higher than Red or Green is higher than Red (e.g. blue sky, green grass, vehicles, screenshots)
+    if red_blue_ratio < 1.10 or red_green_ratio < 0.90:
+        return False, default_error_msg, 0.0, {
+            "hard_rejection": True,
+            "rejection_reason": f"Color distribution incompatible with retinal fundus (R/B={round(red_blue_ratio, 2)}, R/G={round(red_green_ratio, 2)})."
+        }
 
     hue = hsv[:, :, 0]
     val = hsv[:, :, 2]
@@ -148,7 +185,22 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
     else:
         warm_hue_ratio = 0.0
 
-    # 5. Circularity & Contour Checks
+    if warm_hue_ratio < 0.20:
+        return False, default_error_msg, 0.0, {
+            "hard_rejection": True,
+            "rejection_reason": f"Warm hue ratio too low ({round(warm_hue_ratio, 2)} < 0.20)."
+        }
+
+    # 6. Straight Line Detection (Rejects documents, mobile screenshots, buildings, vehicles)
+    edges = cv2.Canny(gray, 50, 150)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=90, minLineLength=60, maxLineGap=10)
+    if lines is not None and len(lines) > 4:
+        return False, default_error_msg, 0.0, {
+            "hard_rejection": True,
+            "rejection_reason": "Artificial straight lines/document structure detected."
+        }
+
+    # 7. Circularity & Contour Checks
     _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -164,45 +216,36 @@ def validate_retina(image_input: Union[Image.Image, np.ndarray, bytes]) -> Tuple
 
     # Accumulate scoring metrics
     score = 0.0
-    if red_blue_ratio >= 1.15:
+    if red_blue_ratio >= 1.25:
         score += 0.25
-    elif red_blue_ratio >= 1.0:
-        score += 0.10
+    elif red_blue_ratio >= 1.10:
+        score += 0.15
 
-    if mean_corner_brightness < 55.0:
+    if mean_corner_brightness < 45.0:
         score += 0.25
-    elif mean_corner_brightness < 80.0:
-        score += 0.10
+    elif mean_corner_brightness < 75.0:
+        score += 0.15
 
     if warm_hue_ratio >= 0.40:
         score += 0.25
-    elif warm_hue_ratio >= 0.25:
-        score += 0.10
+    elif warm_hue_ratio >= 0.20:
+        score += 0.15
 
-    if center_corner_contrast >= 1.25 and (max_circularity >= 0.35 or fundus_area_ratio >= 0.20):
+    if center_corner_contrast >= 1.20 and (max_circularity >= 0.30 or fundus_area_ratio >= 0.15):
         score += 0.25
-    elif center_corner_contrast >= 1.10:
-        score += 0.10
+    elif center_corner_contrast >= 1.05:
+        score += 0.15
 
-    # Hard Rejections for Non-Retinal Images
-    is_hard_rejection = False
-    if mean_corner_brightness > 95.0:
-        is_hard_rejection = True
-    if red_blue_ratio < 0.90:
-        is_hard_rejection = True
-    if mean_r < 20 and mean_g < 20 and mean_b < 20:
-        is_hard_rejection = True
-    if center_corner_contrast < 1.10 and mean_corner_brightness > 60.0:
-        is_hard_rejection = True
-
-    is_retina = (score >= 0.50) and not is_hard_rejection
+    is_retina = (score >= 0.50)
     message = "Valid retinal fundus image detected." if is_retina else default_error_msg
 
     details = {
         "score": round(score, 2),
         "mean_corner_brightness": round(mean_corner_brightness, 2),
         "red_blue_ratio": round(red_blue_ratio, 2),
-        "hard_rejection": is_hard_rejection
+        "red_green_ratio": round(red_green_ratio, 2),
+        "warm_hue_ratio": round(warm_hue_ratio, 2),
+        "hard_rejection": not is_retina
     }
 
     return is_retina, message, score, details
@@ -244,7 +287,7 @@ with st.sidebar:
     ]
     for p in eye_img_paths:
         if p.exists():
-            st.image(str(p))
+            st.image(str(p), use_container_width=True)
             break
 
     st.title("Ocular Diseases")
@@ -278,7 +321,7 @@ else:
         st.error("Invalid image file format. Please upload an uncorrupted image.")
         st.stop()
 
-    st.image(image, use_column_width=True)
+    st.image(image, use_container_width=True)
 
     # ISSUE 1: PRE-INFERENCE RETINAL VALIDATION
     # Validate uploaded image BEFORE sending it to the VGG16 model
