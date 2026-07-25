@@ -392,14 +392,6 @@ def prediction_cls(prediction, class_names):
             return key
 
 
-# Load model with Streamlit status indicator
-with st.spinner('Loading VGG16 AI Model into cache memory...'):
-    try:
-        model = load_model()
-    except Exception as e:
-        st.error(f"Model initialization error: {e}")
-        st.stop()
-
 # Sidebar Configuration
 with st.sidebar:
     eye_img_paths = [
@@ -481,8 +473,14 @@ else:
             """, unsafe_allow_html=True)
             st.stop()
 
-        # If image IS a valid retinal scan, perform VGG16 disease prediction
+        # If image IS a valid retinal scan, lazy load VGG16 model & perform disease prediction
         with st.spinner("Analyzing retinal structures with VGG16 model..."):
+            try:
+                model = load_model()
+            except Exception as e:
+                st.error(f"Model initialization error: {e}")
+                st.stop()
+
             predictions = import_and_predict(image, model)
 
         x = random.randint(98, 99) + random.randint(0, 99) * 0.01
