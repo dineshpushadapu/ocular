@@ -15,19 +15,139 @@ import tensorflow as tf
 # Configure Streamlit Page Settings
 st.set_page_config(
     page_title="MediScan: Ocular Disease Detection",
-    page_icon=":eye:",
+    page_icon="👁️",
     layout="wide",
     initial_sidebar_state='expanded'
 )
 
-# Custom CSS for styling
-hide_streamlit_style = """
-	<style>
-  #MainMenu {visibility: hidden;}
-	footer {visibility: hidden;}
-  </style>
+# Custom Premium Glassmorphism UI Styling
+custom_css = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Outfit', sans-serif;
+    }
+
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Dark Mode Premium Theme */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+        color: #f8fafc;
+    }
+
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background: rgba(15, 23, 42, 0.92) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+    }
+    
+    [data-testid="stSidebar"] img {
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(56, 189, 248, 0.4);
+    }
+
+    /* Hero Banner Header */
+    .hero-container {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+        border-radius: 20px;
+        padding: 2.2rem 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(16px);
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.4rem;
+        letter-spacing: -0.5px;
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem;
+        color: #cbd5e1;
+        font-weight: 400;
+        margin-bottom: 1.2rem;
+    }
+
+    .hero-description {
+        color: #94a3b8;
+        font-size: 1.02rem;
+        line-height: 1.6;
+        margin-bottom: 1.2rem;
+    }
+
+    /* Badges */
+    .badge-container {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .pill-badge {
+        background: rgba(56, 189, 248, 0.12);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    /* Result & Error Banners */
+    .remedy-card {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-left: 5px solid #38bdf8;
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.2rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .remedy-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #38bdf8;
+        margin-bottom: 0.5rem;
+    }
+
+    .remedy-text {
+        color: #e2e8f0;
+        font-size: 1.05rem;
+        line-height: 1.65;
+    }
+
+    .error-banner {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 16px;
+        padding: 1.5rem 1.8rem;
+        margin-top: 1.5rem;
+    }
+
+    .error-title {
+        color: #f87171;
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }
+
+    .error-desc {
+        color: #fca5a5;
+        font-size: 1rem;
+    }
+</style>
 """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(custom_css, unsafe_allow_html=True)
 
 
 # Load VGG16 TensorFlow Model with Streamlit Caching for Cloud Deployment Compatibility
@@ -270,7 +390,7 @@ def prediction_cls(prediction, class_names):
 
 
 # Load model with Streamlit status indicator
-with st.spinner('Model is being loaded..'):
+with st.spinner('Loading VGG16 AI Model into cache memory...'):
     try:
         model = load_model()
     except Exception as e:
@@ -290,30 +410,39 @@ with st.sidebar:
             st.image(str(p), use_container_width=True)
             break
 
-    st.title("Ocular Diseases")
+    st.markdown("## 👁️ **MediScan Portal**")
     st.subheader("Accurate detection of diseases present in the eyes leaves.")
     st.subheader("This helps the user to easily identify the disease and find the appropriate remedy for it")
 
-st.write("""
-         # MEDI-SCAN
-         """)
+    st.markdown("---")
+    st.markdown("### 📋 Supported Conditions")
+    st.markdown("- 🟡 **Cataract**")
+    st.markdown("- 🔴 **Diabetic Retinopathy**")
+    st.markdown("- 🟠 **Glaucoma**")
+    st.markdown("- 🟢 **Normal / Healthy Retina**")
 
-st.write("""
-         ## AI-Powered Medical Image Analysis for Ocular Disease Diagnosis
-         """)
-
-st.write("""
-         This user-friendly tool allows users to upload retinal scans of their eyes and determines whether those eyes are healthy or not.
-
-         If the eye is not healthy, it also tells you what kind of condition the eye might have, such as Diabetic Retinopathy, Glaucoma, or Cataracts.
-
-         Following detection, it offers a treatment recommendation for the identified ailment.
-         """)
+# Hero Header Banner
+st.markdown("""
+<div class="hero-container">
+    <div class="hero-title">👁️ MEDI-SCAN</div>
+    <div class="hero-subtitle">AI-Powered Medical Image Analysis for Ocular Disease Diagnosis</div>
+    <div class="hero-description">
+        This user-friendly tool allows users to upload retinal scans of their eyes and determines whether those eyes are healthy or not.<br>
+        If the eye is not healthy, it also tells you what kind of condition the eye might have, such as Diabetic Retinopathy, Glaucoma, or Cataracts.<br>
+        Following detection, it offers a treatment recommendation for the identified ailment.
+    </div>
+    <div class="badge-container">
+        <span class="pill-badge">⚡ VGG16 Deep Learning</span>
+        <span class="pill-badge">🛡️ Real-Time Retinal Verification</span>
+        <span class="pill-badge">💊 Medical Remedies</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 file = st.file_uploader("Upload a retinal image", type=["jpg", "jpeg", "png", "bmp"])
 
 if file is None:
-    st.text("Please upload an image file")
+    st.info("👆 Please upload a retinal fundus image above to begin ocular diagnostic analysis.")
 else:
     try:
         image = Image.open(file)
@@ -321,53 +450,93 @@ else:
         st.error("Invalid image file format. Please upload an uncorrupted image.")
         st.stop()
 
-    st.image(image, use_container_width=True)
+    # Create 2-column layout for uploaded image and results
+    col1, col2 = st.columns([1, 1.2], gap="large")
 
-    # ISSUE 1: PRE-INFERENCE RETINAL VALIDATION
-    # Validate uploaded image BEFORE sending it to the VGG16 model
-    is_retina, val_msg, val_score, val_details = validate_retina(image)
+    with col1:
+        st.markdown("### 📷 Uploaded Scan")
+        st.image(image, use_container_width=True)
 
-    if not is_retina:
-        # STOP execution immediately for non-retinal images.
-        # Do NOT display prediction, confidence score, or remedy recommendations.
-        st.error(val_msg)
-        st.stop()
+    with col2:
+        st.markdown("### 🔍 Diagnostic Analysis")
 
-    # If image IS a valid retinal scan, perform VGG16 disease prediction
-    predictions = import_and_predict(image, model)
+        # ISSUE 1: PRE-INFERENCE RETINAL VALIDATION
+        # Validate uploaded image BEFORE sending it to the VGG16 model
+        is_retina, val_msg, val_score, val_details = validate_retina(image)
 
-    x = random.randint(98, 99) + random.randint(0, 99) * 0.01
-    st.sidebar.error("Accuracy : " + str(round(x, 2)) + " %")
+        if not is_retina:
+            # STOP execution immediately for non-retinal images.
+            # Do NOT display prediction, confidence score, or remedy recommendations.
+            st.markdown(f"""
+            <div class="error-banner">
+                <div class="error-title">🚫 {val_msg}</div>
+                <div class="error-desc">
+                    The uploaded image does not meet retinal fundus criteria (lacks fundus aperture, blood vessel structure, or valid retina spectrum).<br><br>
+                    <strong>Action Required:</strong> Please upload a clear retinal fundus photograph.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
 
-    class_names = ['Cataract', 'Diabetic Retinopathy', 'Glaucoma', 'Normal']
-    predicted_class = class_names[np.argmax(predictions)]
-    string = "Detected Disease : " + predicted_class
+        # If image IS a valid retinal scan, perform VGG16 disease prediction
+        with st.spinner("Analyzing retinal structures with VGG16 model..."):
+            predictions = import_and_predict(image, model)
 
-    if predicted_class == 'Normal':
-        st.balloons()
-        st.sidebar.success(string)
-        st.sidebar.success("You have a healthy eye :)")
+        x = random.randint(98, 99) + random.randint(0, 99) * 0.01
+        st.sidebar.error("Accuracy : " + str(round(x, 2)) + " %")
 
-    elif predicted_class == 'Cataract':
-        st.sidebar.warning(string)
-        st.markdown("## Remedy")
-        st.info("Surgery is the only way to get rid of a cataract,")
+        class_names = ['Cataract', 'Diabetic Retinopathy', 'Glaucoma', 'Normal']
+        predicted_class = class_names[np.argmax(predictions)]
+        string = "Detected Disease : " + predicted_class
 
-    elif predicted_class == 'Glaucoma':
-        st.sidebar.warning(string)
-        st.markdown("## Remedy")
-        st.info(
-            "Eyedrops are the main treatment for glaucoma. "
-            "There are several different types that can be used, but they all work by reducing the pressure in your eyes. "
-            "They're normally used between 1 and 4 times a day. "
-            "It's important to use them as directed, even if you haven't noticed any problems with your vision.")
+        if predicted_class == 'Normal':
+            st.balloons()
+            st.success(f"### 🎉 {string}")
+            st.sidebar.success(string)
+            st.sidebar.success("You have a healthy eye :)")
 
-    elif predicted_class == 'Diabetic Retinopathy':
-        st.sidebar.warning(string)
-        st.markdown("## Remedy")
-        st.info(
-            "Medicines called anti-VEGF drugs can slow down or reverse diabetic retinopathy. "
-            "Other medicines, called corticosteroids, can also help. Laser treatment. "
-            "To reduce swelling in your retina, eye doctors can use lasers to make the blood vessels shrink and stop leaking.")
-    else:
-        st.markdown("no disease detected")
+            st.markdown("""
+            <div class="remedy-card" style="border-left-color: #22c55e;">
+                <div class="remedy-title" style="color: #4ade80;">✨ Healthy Retina Identified</div>
+                <div class="remedy-text">Your retinal scan shows no signs of Cataract, Glaucoma, or Diabetic Retinopathy. Continue maintaining routine eye checkups and a healthy lifestyle.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif predicted_class == 'Cataract':
+            st.warning(f"### ⚠️ {string}")
+            st.sidebar.warning(string)
+            st.markdown("## Remedy")
+            st.markdown("""
+            <div class="remedy-card" style="border-left-color: #f59e0b;">
+                <div class="remedy-title" style="color: #fbbf24;">💊 Recommended Treatment: Surgery</div>
+                <div class="remedy-text">Surgery is the only way to get rid of a cataract.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif predicted_class == 'Glaucoma':
+            st.warning(f"### ⚠️ {string}")
+            st.sidebar.warning(string)
+            st.markdown("## Remedy")
+            st.markdown("""
+            <div class="remedy-card" style="border-left-color: #f97316;">
+                <div class="remedy-title" style="color: #fb923c;">💊 Recommended Treatment: Eyedrops & Pressure Management</div>
+                <div class="remedy-text">
+                    Eyedrops are the main treatment for glaucoma. There are several different types that can be used, but they all work by reducing the pressure in your eyes. They're normally used between 1 and 4 times a day. It's important to use them as directed, even if you haven't noticed any problems with your vision.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif predicted_class == 'Diabetic Retinopathy':
+            st.warning(f"### ⚠️ {string}")
+            st.sidebar.warning(string)
+            st.markdown("## Remedy")
+            st.markdown("""
+            <div class="remedy-card" style="border-left-color: #ef4444;">
+                <div class="remedy-title" style="color: #f87171;">💊 Recommended Treatment: Anti-VEGF Therapy & Laser Treatment</div>
+                <div class="remedy-text">
+                    Medicines called anti-VEGF drugs can slow down or reverse diabetic retinopathy. Other medicines, called corticosteroids, can also help. Laser treatment to reduce swelling in your retina can make the blood vessels shrink and stop leaking.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("no disease detected")
