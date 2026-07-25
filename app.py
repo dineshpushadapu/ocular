@@ -1,6 +1,9 @@
 # importing the libraries and dependencies needed for creating the UI and supporting the deep learning models used in the project
-import io
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow CPU info messages
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+import io
 import random
 import sys
 from pathlib import Path
@@ -509,7 +512,7 @@ else:
             st.markdown("""
             <div class="remedy-card" style="border-left-color: #f59e0b;">
                 <div class="remedy-title" style="color: #fbbf24;">💊 Recommended Treatment: Surgery</div>
-                <div class="remedy-text">Surgery is the only way to get rid of a cataract.</div>
+                <div class="remedy-text">Surgery is the only way to get rid of a cataract,</div>
             </div>
             """, unsafe_allow_html=True)
 
